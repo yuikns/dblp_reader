@@ -22,6 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
+ *
+ * Start Example:
+ * bazel run //app/dblp_reader:paper_collecter -- --in=$(pwd)/app/dblp_reader/data/dblp.xml --out=$(pwd)/publications.json
+ *
  **/
 #include <cassert>
 #include <cstdio>
@@ -42,19 +46,19 @@
 #include "argcv/c/char/char_helper.h"
 #include "argcv/cxx/helper/xml_sax_parser.h"
 #include "argcv/cxx/str/str.h"
+#include "argcv/cxx/platform/timer.h"
 #include "gflags/gflags.h"
 #include "gflags/gflags_completions.h"
 
-#include "include/json.hpp"
-#include "include/timer.h"
+#include "third_party/njson/json.h"
 
 using argcv::helper::XmlSAXParser;
 using argcv::helper::XmlAttrElems;
 using argcv::helper::XmlAttrPairs;
+using argcv::platform::Timer;
 using argcv::str::StrSlice;
 
 using json = nlohmann::json;
-using argcv::timer::Timer;
 
 DEFINE_string(in, "app/dblp_reader/data/dblp-sample.xml", "input file");
 DEFINE_string(out, "dblp_ext_publications.json", "output file");
@@ -82,14 +86,14 @@ int GetLevel(const std::string &name) {
   }
 }
 
-std::string NameFix(const std::string& name) {
+std::string NameFix(const std::string &name) {
   int i = name.length() - 1;
-  for(; i >= 0; i--) {
-    if(is_digit(name[i])) {
+  for (; i >= 0; i--) {
+    if (is_digit(name[i])) {
       // LOG(INFO) << "is dight...[" << name[i] << "]";
       continue;
     }
-    if(is_western_space(name[i])) {
+    if (is_western_space(name[i])) {
       // LOG(INFO) << "is space...[" << name[i] << "]";
       continue;
     }
@@ -102,7 +106,7 @@ std::string NameFix(const std::string& name) {
 
 int main(int argc, char *argv[]) {
   gflags::SetVersionString("0.0.1");
-  gflags::SetUsageMessage("Usage : ./hello_gflags ");
+  gflags::SetUsageMessage("Usage : ./paper_collecter ");
   gflags::ParseCommandLineNonHelpFlags(&argc, &argv, true);
 
   google::InitGoogleLogging(argv[0]);
@@ -153,7 +157,8 @@ int main(int argc, char *argv[]) {
         switch (clv) {
           case 1:
             LOG_IF_EVERY_N(INFO, (name != "www"), 100000)
-                << "name[" << name << "], n_pubs:" << doc["pubs"].size() << "time spending:" << m_tm.All() << "ms";
+                << "name[" << name << "], n_pubs:" << doc["pubs"].size()
+                << "time spending:" << m_tm.All().Ms() << "ms";
 
             curr_name = name;
             // cleanup
@@ -165,7 +170,9 @@ int main(int argc, char *argv[]) {
               for (const auto attr : attrs) {
                 jattr[attr.first] = attr.second;
               }
-              pub["props"] = jattr;
+              if(jattr.at("key") != nullptr) {
+                pub["trace_id"] = jattr.at("key").get<std::string>();
+              }
             }
             break;
           case 2:
@@ -191,6 +198,7 @@ int main(int argc, char *argv[]) {
               pub["d_type"] = name;
               pub["author"] = author;
               LOG(INFO) << "GET!";
+              
               doc["pubs"].push_back(pub);
               // SetValueByPointer(doc, "/pubs/-", pub);
             }
@@ -209,7 +217,8 @@ int main(int argc, char *argv[]) {
                 }
                 auto fixed_author_name = NameFix(author_name);
                 // if(fixed_author_name.size() != author_name.size()) {
-                //   LOG(INFO) << "from: [" << author_name << "] to: [" << fixed_author_name << "]";
+                //   LOG(INFO) << "from: [" << author_name << "] to: [" <<
+                //   fixed_author_name << "]";
                 // }
                 author.push_back(fixed_author_name);
               } else {
@@ -242,11 +251,12 @@ int main(int argc, char *argv[]) {
   fclose(f);
 
   LOG(INFO) << "doc:\n" << doc.dump(4);
-  LOG(INFO) << "total:" << doc["pubs"].size()  << "time spending:" << m_tm.All() << "ms";
-  
+  LOG(INFO) << "total:" << doc["pubs"].size() << "time spending:" << m_tm.All().Ms()
+            << "ms";
+
   {
     FILE *fout = fopen(FLAGS_out.c_str(), "wb");
-    if(fout == nullptr) {
+    if (fout == nullptr) {
       LOG(ERROR) << "open FLAGS_out failed: " << FLAGS_out;
     } else {
       std::string dump = doc.dump(4);

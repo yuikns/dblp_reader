@@ -1,19 +1,16 @@
 cc_binary(
     name = "paper_collecter",
-    srcs = glob(
-        [
-          "main.cc",
-          "include/*.hpp",
-          "include/*.h",
-        ],
-    ),
+    srcs = [
+        "main.cc",
+    ],
     deps = [
-        "//argcv/cxx:argcv_str",
-        "//argcv/c:argcv_char",
-        "//argcv/cxx/helper:xml_sax_parser",
+        "//argcv/c:char",
+        "//argcv/cxx:platform",
+        "//argcv/cxx:str",
+        "//argcv/cxx:helper",
         "//external:glog",
         "//external:gflags",
-        "//external:rapidjson",
+        "//third_party/njson:json",
     ],
     visibility = ["//visibility:public"],
 )
