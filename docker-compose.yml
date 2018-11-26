@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  reader:
+    build: ./
+    restart: "no"
+    volumes:
+      - ./data:/data
+    environment:
+      - CONTAINER=docker
+    command: ["--in=/data/dblp.xml", "--out=/data/publications.json", "--name=Jimeng Sun"]
+
