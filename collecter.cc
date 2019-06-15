@@ -38,7 +38,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
-#include <memory>
+// #include <memory>
 #include <mutex>
 #include <stack>
 #include <string>
@@ -106,6 +106,10 @@ std::string NameFix(const std::string& name) {
   return StrSlice(name).Take(i).ToString();
 }
 
+void IgnoreErrorHandling(void * ctx, const char * msg, ...) {
+    
+}
+
 int main(int argc, char* argv[]) {
   gflags::SetVersionString("0.0.1");
   gflags::SetUsageMessage("Usage : ./paper_collecter ");
@@ -143,11 +147,13 @@ int main(int argc, char* argv[]) {
   std::string field_name = "";
   StrSlice sslc;
   bool is_valid_pub = false;
+  
+  // ignore generic error
+  xmlSetGenericErrorFunc(NULL, &IgnoreErrorHandling);
   XmlSAXParser handler;
   handler
-      .AddDTDSystemURIMapping("dblp-2017-08-29.dtd",
-                              "http://doc.argcv.com/dblp/dblp.dtd")
-                              // "https://dblp.uni-trier.de/xml/dblp.dtd")
+      .AddDTDSystemURIMapping("dblp.dtd", "http://doc.argcv.com/dblp/dblp.dtd")
+      // "https://dblp.uni-trier.de/xml/dblp.dtd")
       .Option(XML_PARSE_NOBLANKS | XML_PARSE_NOCDATA | XML_PARSE_COMPACT |
               XML_PARSE_NSCLEAN)
       .OnStartElement([&](const std::string& name, const XmlAttrPairs& attrs) {
@@ -244,8 +250,14 @@ int main(int argc, char* argv[]) {
           sslc.Append(buff);
         }
       })
-      .OnWarning([&](const std::string& msg) { LOG(WARNING) << msg; })
-      .OnError([&](const std::string& msg) { LOG(ERROR) << msg; });
+      .OnWarning([&](const std::string& msg) {
+        //
+        LOG(WARNING) << msg;
+      })
+      .OnError([&](const std::string& msg) {
+        //
+        LOG(ERROR) << msg;
+      });
 
   int status = handler.ReadFile(f, FLAGS_in.c_str());
   if (status != 0) {

@@ -1,7 +1,7 @@
 cc_binary(
     name = "paper_collecter",
     srcs = [
-        "main.cc",
+        "collecter.cc",
     ],
     deps = [
         "@com_github_argcv_argcv//argcv/c:char",
